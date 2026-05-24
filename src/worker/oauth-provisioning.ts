@@ -58,11 +58,25 @@ async function provisionNewClient(
       'Your Sapt account has no projects yet. Create one at app.sapt.ai before signing in here.'
     )
   }
+
   // The OAuth client only verifies identity — the project it lives under is
-  // incidental and is not tied to the agency's client projects.
-  const home = projects[0]
+  // incidental and is not tied to the agency's client projects. We just need
+  // one where this API key holds `oauth_clients:write`. Check in `listProjects`
+  // order; first hit wins.
+  let home: { id: string } | null = null
+  for (const project of projects) {
+    const allowed = await sapt.checkProjectPermission(project.id, 'oauth_clients:write')
+    if (allowed) {
+      home = project
+      break
+    }
+  }
   if (!home) {
-    throw new SaptApiError(500, 'unreachable', 'listProjects returned an empty leading element.')
+    throw new SaptApiError(
+      403,
+      'no_writable_project',
+      `Your API key doesn't have 'oauth_clients:write' in any of your ${projects.length} Sapt project(s). Grant it to your role in any project (Project Settings → Roles), or rotate to a reflecting-scope key that inherits it.`
+    )
   }
 
   const result = await sapt.createOAuthClient(home.id, {

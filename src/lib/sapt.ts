@@ -127,6 +127,7 @@ export interface SaptClient {
     clientId: string,
     input: { redirectURLs?: string[]; name?: string; disabled?: boolean }
   ): Promise<OAuthClient>
+  checkProjectPermission(projectId: string, permission: string): Promise<boolean>
 }
 
 export interface UpdateProjectInput {
@@ -243,6 +244,11 @@ export function createSaptClient(opts: SaptClientOptions): SaptClient {
         `/projects/${encodeURIComponent(projectId)}/oauth-clients/${encodeURIComponent(clientId)}`,
         input
       )
+    },
+    async checkProjectPermission(projectId, permission) {
+      const qs = new URLSearchParams({ projectId, permission }).toString()
+      const res = await request<{ allowed: boolean }>('GET', `/auth/check-permission?${qs}`)
+      return res.allowed
     },
   }
 }
