@@ -114,6 +114,7 @@ export interface SaptClient {
     projectId: string,
     input: { email: string; projectRoleId: string }
   ): Promise<CreateInvitationResult>
+  listOAuthClients(projectId: string): Promise<OAuthClient[]>
   createOAuthClient(
     projectId: string,
     input: {
@@ -230,6 +231,13 @@ export function createSaptClient(opts: SaptClientOptions): SaptClient {
         `/projects/${encodeURIComponent(projectId)}/invitations`,
         input
       )
+    },
+    async listOAuthClients(projectId) {
+      const res = await request<{ clients: OAuthClient[] }>(
+        'GET',
+        `/projects/${encodeURIComponent(projectId)}/oauth-clients`
+      )
+      return res.clients
     },
     async createOAuthClient(projectId, input) {
       return request<CreateOAuthClientResult>(

@@ -1,27 +1,21 @@
 /**
  * First-deploy auto-provisioning of the public PKCE OAuth client.
  *
- * Called from /auth/start. On first sign-in:
- *   1. Resolve the API key holder via /auth/me.
- *   2. Pick their first project as the client's home (incidental — the OAuth
- *      client only verifies identity; it isn't bound to the agency's client
- *      projects this template later mints).
- *   3. POST /projects/{projectId}/oauth-clients with `clientType: 'public'` and
- *      the worker's own /auth/callback URL as the sole redirect URL.
- *   4. Cache `{clientId, projectId, redirectURLs}` in KV.
+ * Called from /auth/start. Idempotent across KV wipes: if there's no cached
+ * client, we first look for an existing client named CLIENT_NAME in any
+ * project the API key can write OAuth clients to, and adopt it rather than
+ * creating a duplicate. Only create a new client when nothing matches.
  *
- * On every subsequent sign-in: re-read from KV. If the current request's
- * /auth/callback URL isn't in the client's registered redirect URLs (e.g.
- * agency owner moved to a custom domain, or is testing locally), PATCH the
- * client to append it. Rare path; keeps the deploy-once flow seamless across
- * environments.
+ * Subsequent sign-ins re-read from KV. If the current request's /auth/callback
+ * URL isn't in the client's registered redirect URLs (e.g. agency owner moved
+ * to a custom domain, or is testing locally), PATCH the client to append it.
  *
- * To force re-provisioning (e.g. you want a fresh client), delete the
- * `oauth-client` KV key from the Cloudflare dashboard.
+ * To force re-provisioning, delete the `oauth-client` KV key from the
+ * Cloudflare dashboard.
  */
 
 import { getOAuthClientRecord, putOAuthClientRecord, type OAuthClientRecord } from '@/lib/kv'
-import { SaptApiError } from '@/lib/sapt'
+import { SaptApiError, type OAuthClient } from '@/lib/sapt'
 import type { WorkerEnv } from './env'
 import { saptFromEnv } from './sapt'
 
@@ -59,24 +53,61 @@ async function provisionNewClient(
     )
   }
 
-  // The OAuth client only verifies identity — the project it lives under is
-  // incidental and is not tied to the agency's client projects. We just need
-  // one where this API key holds `oauth_clients:write`. Check in `listProjects`
-  // order; first hit wins.
+  // Find a project where the API key holds `oauth_clients:write`. The OAuth
+  // client only verifies identity — the project it lives under is incidental.
+  // Once we find a writable project, look for an existing CLIENT_NAME client
+  // to adopt (idempotent across KV wipes) and only create when nothing
+  // matches.
   let home: { id: string } | null = null
+  let existing: OAuthClient | null = null
   for (const project of projects) {
     const allowed = await sapt.checkProjectPermission(project.id, 'oauth_clients:write')
-    if (allowed) {
+    if (!allowed) continue
+
+    const clients = await sapt.listOAuthClients(project.id)
+    const match = clients.find((c) => c.name === CLIENT_NAME && c.type === 'public' && !c.disabled)
+    if (match) {
       home = project
+      existing = match
       break
     }
+    // Remember the first writable project so we can create the client there
+    // if no existing CLIENT_NAME client turns up in any other writable project.
+    if (!home) home = project
   }
+
   if (!home) {
     throw new SaptApiError(
       403,
       'no_writable_project',
       `Your API key doesn't have 'oauth_clients:write' in any of your ${projects.length} Sapt project(s). Grant it to your role in any project (Project Settings → Roles), or rotate to a reflecting-scope key that inherits it.`
     )
+  }
+
+  if (existing) {
+    // Adopt the existing client. Append the current redirect URL if missing.
+    const redirectURLs = existing.redirectURLs.includes(redirectUrl)
+      ? existing.redirectURLs
+      : [...existing.redirectURLs, redirectUrl]
+
+    if (redirectURLs.length !== existing.redirectURLs.length) {
+      const updated = await sapt.updateOAuthClient(home.id, existing.clientId, { redirectURLs })
+      const record: OAuthClientRecord = {
+        clientId: existing.clientId,
+        projectId: home.id,
+        redirectURLs: updated.redirectURLs,
+      }
+      await putOAuthClientRecord(env.LINKS, record)
+      return record
+    }
+
+    const record: OAuthClientRecord = {
+      clientId: existing.clientId,
+      projectId: home.id,
+      redirectURLs: existing.redirectURLs,
+    }
+    await putOAuthClientRecord(env.LINKS, record)
+    return record
   }
 
   const result = await sapt.createOAuthClient(home.id, {
