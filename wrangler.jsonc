@@ -15,12 +15,6 @@
       "binding": "LINKS"
     }
   ],
-  "alias": {
-    "@/lib/sapt": "./src/lib/sapt.ts",
-    "@/lib/kv": "./src/lib/kv.ts",
-    "@/lib/types": "./src/lib/types.ts",
-    "@/lib/utils": "./src/lib/utils.ts"
-  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

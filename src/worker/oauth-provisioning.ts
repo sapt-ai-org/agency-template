@@ -14,8 +14,8 @@
  * Cloudflare dashboard.
  */
 
-import { getOAuthClientRecord, putOAuthClientRecord, type OAuthClientRecord } from '@/lib/kv'
-import { SaptApiError, type OAuthClient } from '@/lib/sapt'
+import { getOAuthClientRecord, putOAuthClientRecord, type OAuthClientRecord } from '../lib/kv'
+import { SaptApiError, type OAuthClient } from '../lib/sapt'
 import type { WorkerEnv } from './env'
 import { saptFromEnv } from './sapt'
 

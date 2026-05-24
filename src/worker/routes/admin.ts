@@ -6,9 +6,9 @@ import {
   listLinks,
   putAgencyConfig,
   putLink,
-} from '@/lib/kv'
-import { DEFAULT_AGENCY_CONFIG, type AgencyConfig } from '@/lib/config'
-import type { AdminLinkView, LinkRecord, MintLinkInput } from '@/lib/types'
+} from '../../lib/kv'
+import { DEFAULT_AGENCY_CONFIG, type AgencyConfig } from '../../lib/config'
+import type { AdminLinkView, LinkRecord, MintLinkInput } from '../../lib/types'
 import type { AppBindings } from '../env'
 import { saptFromEnv } from '../sapt'
 import { requireSession } from '../session'

@@ -1,3 +1,13 @@
+/**
+ * Worker code uses **relative imports** for everything under `src/lib/` and
+ * `src/theme.ts`. The `@/` alias is honored by Vite and the TS language
+ * server but Wrangler's bundler ignores it (it doesn't read tsconfig
+ * `paths`, and its own `alias` map has no wildcard form). Adding files via
+ * `@/` here will break `npm run dev` and `npm run deploy`. Frontend code
+ * under `src/routes/`, `src/components/`, `src/questionnaire/` keeps the
+ * `@/` alias since Vite handles the SPA build.
+ */
+
 import { Hono } from 'hono'
 import { authRoutes } from './routes/auth'
 import { adminRoutes } from './routes/admin'

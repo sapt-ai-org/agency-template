@@ -17,7 +17,7 @@
  *                     written to the Sapt memory entry at flow completion.
  */
 
-import { theme as defaultTheme } from '@/theme'
+import { theme as defaultTheme } from '../theme'
 
 export interface AgencyTheme {
   agencyName: string

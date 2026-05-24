@@ -1,5 +1,5 @@
 import type { Context } from 'hono'
-import { getSessionSecret } from '@/lib/kv'
+import { getSessionSecret } from '../lib/kv'
 import type { WorkerEnv } from './env'
 
 const COOKIE_NAME = 'session'

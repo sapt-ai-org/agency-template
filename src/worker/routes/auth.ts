@@ -3,7 +3,7 @@ import { saptFromEnv } from '../sapt'
 import { verifyIdToken } from '../jwt'
 import { clearSession, setSession } from '../session'
 import { getOrProvisionOAuthClient } from '../oauth-provisioning'
-import { SaptApiError } from '@/lib/sapt'
+import { SaptApiError } from '../../lib/sapt'
 import type { AppBindings, WorkerEnv } from '../env'
 
 const STATE_COOKIE = 'oauth_state'
