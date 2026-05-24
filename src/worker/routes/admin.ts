@@ -7,7 +7,11 @@ import { requireSession } from '../session'
 
 export const adminRoutes = new Hono<AppBindings>()
 
-adminRoutes.use('*', async (c, next) => {
+// Scope the session check to /api/admin/*. Mounting the routers at '/' makes
+// Hono apply this middleware globally if it uses '*', which is wrong — the
+// public questionnaire endpoints (/api/steps/...) must remain reachable
+// without a session.
+adminRoutes.use('/api/admin/*', async (c, next) => {
   const session = await requireSession(c)
   if (session instanceof Response) return session
   return next()
