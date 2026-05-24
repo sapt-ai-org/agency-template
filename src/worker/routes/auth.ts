@@ -2,25 +2,39 @@ import { Hono, type Context } from 'hono'
 import { saptFromEnv } from '../sapt'
 import { verifyIdToken } from '../jwt'
 import { clearSession, setSession } from '../session'
-import type { AppBindings } from '../env'
+import type { AppBindings, WorkerEnv } from '../env'
 
 const STATE_COOKIE = 'oauth_state'
 const STATE_TTL_SECONDS = 600
+const VERIFIER_KV_PREFIX = 'oauth-verifier:'
 
 export const authRoutes = new Hono<AppBindings>()
 
-authRoutes.get('/auth/start', (c) => {
+authRoutes.get('/auth/start', async (c) => {
   const state = randomToken()
+  const verifier = randomVerifier()
+  const challenge = await sha256base64url(verifier)
+
+  // The verifier is stored server-side keyed by state and read back on
+  // callback. Keeps the cookie tiny and ensures the verifier never crosses
+  // origins. KV's expirationTtl auto-cleans abandoned attempts.
+  await c.env.LINKS.put(VERIFIER_KV_PREFIX + state, verifier, {
+    expirationTtl: STATE_TTL_SECONDS,
+  })
+
   c.header(
     'Set-Cookie',
     `${STATE_COOKIE}=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${STATE_TTL_SECONDS}`
   )
+
   const url = new URL(`${c.env.SAPT_ENDPOINT}/api/auth/oauth2/authorize`)
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('client_id', c.env.SAPT_OAUTH_CLIENT_ID)
   url.searchParams.set('redirect_uri', new URL('/auth/callback', c.req.url).toString())
   url.searchParams.set('state', state)
   url.searchParams.set('scope', 'openid profile email')
+  url.searchParams.set('code_challenge', challenge)
+  url.searchParams.set('code_challenge_method', 'S256')
   return c.redirect(url.toString())
 })
 
@@ -36,6 +50,11 @@ authRoutes.get('/auth/callback', async (c) => {
     return renderError(c, 'Sapt did not return an authorization code.', 400)
   }
 
+  const verifier = await consumeVerifier(c.env, state)
+  if (!verifier) {
+    return renderError(c, 'Sign-in attempt expired or was reused. Please try again.', 400)
+  }
+
   const tokenRes = await fetch(`${c.env.SAPT_ENDPOINT}/api/auth/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -44,7 +63,7 @@ authRoutes.get('/auth/callback', async (c) => {
       code,
       redirect_uri: new URL('/auth/callback', c.req.url).toString(),
       client_id: c.env.SAPT_OAUTH_CLIENT_ID,
-      client_secret: c.env.SAPT_OAUTH_CLIENT_SECRET,
+      code_verifier: verifier,
     }),
   })
 
@@ -96,6 +115,14 @@ authRoutes.post('/auth/logout', (c) => {
   return c.redirect('/')
 })
 
+async function consumeVerifier(env: WorkerEnv, state: string): Promise<string | null> {
+  const key = VERIFIER_KV_PREFIX + state
+  const verifier = await env.LINKS.get(key)
+  if (!verifier) return null
+  await env.LINKS.delete(key)
+  return verifier
+}
+
 function renderError(c: Context<AppBindings>, message: string, status: number) {
   return c.html(
     `<!doctype html><html><head><title>Sign-in error</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;max-width:480px;margin:80px auto;padding:0 20px;color:#0a0a0a}h1{font-size:20px}p{color:#555;line-height:1.5}a{color:#0a0a0a}</style></head><body><h1>Sign-in failed</h1><p>${escapeHtml(message)}</p><p><a href="/">Return home</a></p></body></html>`,
@@ -133,4 +160,26 @@ function randomToken(): string {
   const bytes = new Uint8Array(24)
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+// PKCE code_verifier: RFC 7636 says 43–128 chars from the unreserved set
+// (A–Z, a–z, 0–9, '-', '.', '_', '~'). Base64url of 32 random bytes lands at
+// 43 characters and uses an allowed subset of the unreserved set.
+function randomVerifier(): string {
+  const buffer = new ArrayBuffer(32)
+  const bytes = new Uint8Array(buffer)
+  crypto.getRandomValues(bytes)
+  return b64urlEncode(bytes)
+}
+
+async function sha256base64url(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return b64urlEncode(new Uint8Array(digest))
+}
+
+function b64urlEncode(bytes: Uint8Array): string {
+  let str = ''
+  for (const b of bytes) str += String.fromCharCode(b)
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }

@@ -2,10 +2,8 @@
 # Generate at app.sapt.ai -> Account Settings -> API Keys.
 SAPT_API_KEY=
 
-# OAuth client ID. Create at app.sapt.ai -> any project ->
-# Project Settings -> OAuth Clients. Use
+# Public PKCE OAuth client ID. Create at app.sapt.ai -> any project ->
+# Project Settings -> OAuth Clients. Type: "public". Use
 # https://<your-worker>.workers.dev/auth/callback as the redirect URL.
+# There is no client secret — PKCE is used instead.
 SAPT_OAUTH_CLIENT_ID=
-
-# OAuth client secret returned when you created the OAuth client above.
-SAPT_OAUTH_CLIENT_SECRET=

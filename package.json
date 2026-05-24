@@ -29,10 +29,7 @@
         "description": "Your Sapt API key with reflecting scope. Generate at app.sapt.ai → Account Settings → API Keys."
       },
       "SAPT_OAUTH_CLIENT_ID": {
-        "description": "OAuth client ID. Create at app.sapt.ai → any project → Project Settings → OAuth Clients. Use https://<your-worker>.workers.dev/auth/callback as the redirect URL."
-      },
-      "SAPT_OAUTH_CLIENT_SECRET": {
-        "description": "OAuth client secret returned when you created the OAuth client above."
+        "description": "Public PKCE OAuth client ID. Create at app.sapt.ai → any project → Project Settings → OAuth Clients (type: public). Use https://<your-worker>.workers.dev/auth/callback as the redirect URL."
       }
     }
   },

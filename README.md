@@ -14,7 +14,7 @@ The template is a single Cloudflare Worker that serves both an API and a static 
 
 ## Setup
 
-Three things to grab before you click the deploy button. All from `app.sapt.ai`.
+Two things to grab before you click the deploy button. All from `app.sapt.ai`.
 
 ### 1. Pick your worker name
 
@@ -29,10 +29,10 @@ Decide what you want your deployment URL to look like. Cloudflare's default is `
 `app.sapt.ai` → pick any of your projects → **Project Settings → OAuth Clients → New client**.
 
 - Name: anything (e.g. "My Onboarding Template")
-- Type: **Confidential** (web)
+- Type: **Public** (PKCE) — no client secret needed
 - Redirect URL: `https://<your-worker-name>.<your-cf-account>.workers.dev/auth/callback`
 
-Copy both the **Client ID** and **Client Secret**.
+Copy the **Client ID**.
 
 > The OAuth client is only used to verify your identity when you sign in to the admin view. It's a one-time setup per agency. The project you create it under is incidental — it isn't tied to the client projects this template creates.
 
@@ -42,7 +42,6 @@ The button above forks this repo into your GitHub and opens a Cloudflare deploy 
 
 - `SAPT_API_KEY` — from step 2
 - `SAPT_OAUTH_CLIENT_ID` — from step 3
-- `SAPT_OAUTH_CLIENT_SECRET` — from step 3
 
 Cloudflare provisions a KV namespace automatically. Deploy.
 
