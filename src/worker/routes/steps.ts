@@ -123,21 +123,9 @@ async function runStep(name: Step, ctx: StepContext): Promise<StepResult> {
         return { payload: view }
       }
 
-      if (ctx.progress.connectSessionToken) {
-        const view = await ctx.sapt
-          .getConnectSession(ctx.link.projectId, ctx.progress.connectSessionToken)
-          .catch(() => null)
-        if (view && view.status === 'pending') {
-          return {
-            payload: {
-              connectUrl: rebuildConnectUrl(ctx.env, view),
-              token: view.token,
-              expiresAt: view.expiresAt,
-            },
-          }
-        }
-      }
-
+      // Always mint a fresh connect-session on "start". Re-clicking the
+      // button after a failure or a long wait should give a usable URL,
+      // not try to reanimate the previous (possibly expired) session.
       const session = await ctx.sapt.createConnectSession(ctx.link.projectId, {
         providerId: 'meta',
         clientInvite: true,
@@ -214,10 +202,6 @@ function mustString(body: Record<string, unknown>, key: string): string {
     throw new SaptApiError(400, 'bad_request', `Missing required field: ${key}`)
   }
   return value
-}
-
-function rebuildConnectUrl(env: WorkerEnv, view: { token: string }): string {
-  return `${env.SAPT_ENDPOINT}/oauth-connect/${view.token}`
 }
 
 function statusOrDefault(s: number): 400 | 401 | 403 | 404 | 409 | 500 | 502 {
