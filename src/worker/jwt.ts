@@ -3,8 +3,9 @@
  * payload (specifically the `sub` claim and standard timing fields) on success,
  * null on failure. JWKS is fetched once per worker boot and cached in memory.
  *
- * Trust model: we verify signature + exp + iss. Audience is checked against the
- * OAuth client_id (which the template owns); skew tolerance is 60 seconds.
+ * Trust model: signature + iss + aud + exp. Audience is the OAuth client_id.
+ * Skew tolerance is 60 seconds. Sapt currently signs with EdDSA (Ed25519);
+ * RS256 and ES256 are accepted for forward-compat.
  */
 
 export interface IdTokenPayload {
@@ -42,7 +43,7 @@ export async function verifyIdToken(
   const header = decodeJson<{ alg?: string; kid?: string }>(headerB64)
   const payload = decodeJson<IdTokenPayload>(payloadB64)
   if (!header || !payload) return null
-  if (header.alg !== 'RS256' && header.alg !== 'ES256') return null
+  if (header.alg !== 'RS256' && header.alg !== 'ES256' && header.alg !== 'EdDSA') return null
 
   if (typeof payload.sub !== 'string' || payload.sub.length === 0) return null
   if (typeof payload.iss !== 'string' || payload.iss !== options.expectedIssuer) return null
@@ -60,17 +61,27 @@ export async function verifyIdToken(
   const jwk = keys.find((k) => (header.kid ? (k as JwkEntry).kid === header.kid : true))
   if (!jwk) return null
 
-  const algorithm: RsaHashedImportParams | EcKeyImportParams =
+  // Web Crypto's importKey signatures vary per algorithm. RS256 wants
+  // RsaHashedImportParams, ES256 wants EcKeyImportParams, EdDSA over Ed25519
+  // takes a plain { name: 'Ed25519' }. The corresponding verify() algorithm
+  // names also differ.
+  const algorithm: RsaHashedImportParams | EcKeyImportParams | { name: 'Ed25519' } =
     header.alg === 'RS256'
       ? { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
-      : { name: 'ECDSA', namedCurve: 'P-256' }
+      : header.alg === 'ES256'
+        ? { name: 'ECDSA', namedCurve: 'P-256' }
+        : { name: 'Ed25519' }
 
   const cryptoKey = await crypto.subtle.importKey('jwk', jwk, algorithm, false, ['verify'])
   const sig = b64urlToBytes(sigB64)
   const signed = new TextEncoder().encode(`${headerB64}.${payloadB64}`)
 
   const verifyAlg: AlgorithmIdentifier | EcdsaParams =
-    header.alg === 'RS256' ? 'RSASSA-PKCS1-v1_5' : { name: 'ECDSA', hash: 'SHA-256' }
+    header.alg === 'RS256'
+      ? 'RSASSA-PKCS1-v1_5'
+      : header.alg === 'ES256'
+        ? { name: 'ECDSA', hash: 'SHA-256' }
+        : 'Ed25519'
 
   const ok = await crypto.subtle.verify(verifyAlg, cryptoKey, sig, signed)
   return ok ? payload : null
