@@ -83,8 +83,18 @@ authRoutes.get('/auth/callback', async (c) => {
   if (!payload) return renderError(c, 'The id_token from Sapt failed verification.', 502)
 
   const sapt = saptFromEnv(c.env)
-  const me = await sapt.getAuthMe().catch(() => null)
-  if (!me) return renderError(c, 'Could not look up the API key holder. Check SAPT_API_KEY.', 502)
+  let me
+  try {
+    me = await sapt.getAuthMe()
+  } catch (err) {
+    console.error('[auth/callback] getAuthMe failed:', err)
+    const detail = err instanceof Error ? err.message : String(err)
+    return renderError(
+      c,
+      `Could not look up the API key holder. Check SAPT_API_KEY. (${detail})`,
+      502
+    )
+  }
 
   if (me.actorType !== 'user') {
     return renderError(
