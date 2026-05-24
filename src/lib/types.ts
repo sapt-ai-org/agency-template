@@ -1,13 +1,6 @@
-export type Step = 'welcome' | 'website' | 'brand' | 'audience' | 'connect-meta' | 'invite'
+export type Step = 'welcome' | 'brand' | 'audience' | 'connect-meta' | 'invite'
 
-export const STEP_ORDER: Step[] = [
-  'welcome',
-  'website',
-  'brand',
-  'audience',
-  'connect-meta',
-  'invite',
-]
+export const STEP_ORDER: Step[] = ['welcome', 'brand', 'audience', 'connect-meta', 'invite']
 
 export type LinkStatus = 'pending' | 'completed'
 
@@ -25,7 +18,6 @@ export interface ProgressRecord {
   currentStep: Step
   brand?: string
   audience?: string
-  websiteUrl?: string
   connectSessionToken?: string
   adminRoleId?: string
   invitedEmail?: string

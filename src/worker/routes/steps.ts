@@ -65,14 +65,6 @@ async function runStep(name: Step, ctx: StepContext): Promise<StepResult> {
     case 'welcome':
       return { progress: advance(ctx.progress, 'welcome') }
 
-    case 'website': {
-      const url = typeof ctx.body.url === 'string' ? ctx.body.url.trim() : ''
-      if (url) {
-        await ctx.sapt.updateProject(ctx.link.projectId, { urls: [{ name: 'website', url }] })
-      }
-      return { progress: advance({ ...ctx.progress, websiteUrl: url || undefined }, 'website') }
-    }
-
     case 'brand': {
       const content = mustString(ctx.body, 'content')
       await ctx.sapt.createMemoryEntry(ctx.link.projectId, {
