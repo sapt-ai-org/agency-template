@@ -121,7 +121,9 @@ export function createSaptClient(opts: SaptClientOptions): SaptClient {
     const res = await fetchImpl(url, {
       method,
       headers: {
-        Authorization: `Bearer ${opts.apiKey}`,
+        // Sapt's API key middleware reads the `ApiKey` scheme. `Bearer` is
+        // reserved for session and OAuth tokens.
+        Authorization: `ApiKey ${opts.apiKey}`,
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

@@ -165,16 +165,16 @@ describe('createSaptClient', () => {
     await expect(client.getAuthMe()).rejects.toMatchObject({ status: 500, code: 'http_500' })
   })
 
-  it('attaches the bearer header', async () => {
+  it('attaches the ApiKey authorization header', async () => {
     const calls: RequestInit[] = []
     const fetchImpl = ((_url: RequestInfo | URL, init?: RequestInit) => {
       if (init) calls.push(init)
       return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))
     }) as typeof fetch
-    const client = createSaptClient({ apiKey: 'sk_abc', endpoint: 'https://x', fetchImpl })
+    const client = createSaptClient({ apiKey: 'sapt_abc', endpoint: 'https://x', fetchImpl })
     await client.getAuthMe()
     const headers = calls[0]?.headers as Record<string, string>
-    expect(headers.Authorization).toBe('Bearer sk_abc')
+    expect(headers.Authorization).toBe('ApiKey sapt_abc')
   })
 })
 
