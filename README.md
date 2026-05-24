@@ -14,38 +14,23 @@ The template is a single Cloudflare Worker that serves both an API and a static 
 
 ## Setup
 
-Two things to grab before you click the deploy button. All from `app.sapt.ai`.
+One secret to grab before you click the deploy button.
 
-### 1. Pick your worker name
-
-Decide what you want your deployment URL to look like. Cloudflare's default is `https://<worker-name>.<your-cf-account>.workers.dev`. Pick a name and write it down — you'll need it in step 3.
-
-### 2. Generate a Sapt API key
+### 1. Generate a Sapt API key
 
 `app.sapt.ai` → **Account Settings → API Keys → New key**. Use the **reflecting-scope** option so the key automatically covers new projects you create later. Copy the secret.
 
-### 3. Create a Sapt OAuth client
-
-`app.sapt.ai` → pick any of your projects → **Project Settings → OAuth Clients → New client**.
-
-- Name: anything (e.g. "My Onboarding Template")
-- Type: **Public** (PKCE) — no client secret needed
-- Redirect URL: `https://<your-worker-name>.<your-cf-account>.workers.dev/auth/callback`
-
-Copy the **Client ID**.
-
-> The OAuth client is only used to verify your identity when you sign in to the admin view. It's a one-time setup per agency. The project you create it under is incidental — it isn't tied to the client projects this template creates.
-
-### 4. Click the deploy button
+### 2. Click the deploy button
 
 The button above forks this repo into your GitHub and opens a Cloudflare deploy form. Paste:
 
-- `SAPT_API_KEY` — from step 2
-- `SAPT_OAUTH_CLIENT_ID` — from step 3
+- `SAPT_API_KEY` — from step 1
 
 Cloudflare provisions a KV namespace automatically. Deploy.
 
-When it's done, visit your worker URL and click **Sign in with Sapt**.
+When it's done, visit your worker URL and click **Sign in with Sapt**. On the first click, the template uses your API key to auto-create a public PKCE OAuth client on Sapt (under your first project — the choice is incidental, the client only verifies identity) and caches its client id in KV. Subsequent sign-ins reuse it.
+
+> The OAuth client's redirect URL is set to whatever host you sign in from. If you later move to a custom domain or test locally, the template appends the new `/auth/callback` URL to the existing client automatically. To force re-provisioning, delete the `oauth-client` key from your worker's KV namespace.
 
 ## Customizing
 
@@ -90,7 +75,7 @@ cp .dev.vars.example .dev.vars
 npm run dev
 ```
 
-`npm run dev` boots `wrangler dev` on `http://localhost:8787`. For local OAuth to work, your Sapt OAuth client's redirect URL must include `http://localhost:8787/auth/callback`.
+`npm run dev` boots `wrangler dev` on `http://localhost:8787`. The first sign-in attempt auto-provisions the OAuth client (or appends `http://localhost:8787/auth/callback` to the existing one), so local OAuth Just Works as long as `SAPT_API_KEY` is set in `.dev.vars`.
 
 Useful commands:
 
@@ -128,6 +113,7 @@ src/
 │   ├── session.ts            # Signed cookie sessions
 │   ├── jwt.ts                # id_token verification
 │   ├── sapt.ts               # SaptClient factory
+│   ├── oauth-provisioning.ts # First-deploy OAuth client auto-creation
 │   └── routes/
 │       ├── auth.ts           # OAuth start + callback + logout
 │       ├── admin.ts          # /api/admin/* (gated by session)

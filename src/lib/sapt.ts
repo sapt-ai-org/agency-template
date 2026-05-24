@@ -65,6 +65,22 @@ export interface CreateInvitationResult {
   expiresAt: string | null
 }
 
+export interface OAuthClient {
+  id: string
+  clientId: string
+  name: string
+  type: string
+  redirectURLs: string[]
+  disabled: boolean
+  projectId: string | null
+}
+
+export interface CreateOAuthClientResult {
+  clientId: string
+  clientSecret: string | null
+  client: OAuthClient
+}
+
 export class SaptApiError extends Error {
   constructor(
     public readonly status: number,
@@ -98,6 +114,19 @@ export interface SaptClient {
     projectId: string,
     input: { email: string; projectRoleId: string }
   ): Promise<CreateInvitationResult>
+  createOAuthClient(
+    projectId: string,
+    input: {
+      name: string
+      redirectURLs: string[]
+      clientType?: 'web' | 'public'
+    }
+  ): Promise<CreateOAuthClientResult>
+  updateOAuthClient(
+    projectId: string,
+    clientId: string,
+    input: { redirectURLs?: string[]; name?: string; disabled?: boolean }
+  ): Promise<OAuthClient>
 }
 
 export interface UpdateProjectInput {
@@ -198,6 +227,20 @@ export function createSaptClient(opts: SaptClientOptions): SaptClient {
       return request<CreateInvitationResult>(
         'POST',
         `/projects/${encodeURIComponent(projectId)}/invitations`,
+        input
+      )
+    },
+    async createOAuthClient(projectId, input) {
+      return request<CreateOAuthClientResult>(
+        'POST',
+        `/projects/${encodeURIComponent(projectId)}/oauth-clients`,
+        input
+      )
+    },
+    async updateOAuthClient(projectId, clientId, input) {
+      return request<OAuthClient>(
+        'PATCH',
+        `/projects/${encodeURIComponent(projectId)}/oauth-clients/${encodeURIComponent(clientId)}`,
         input
       )
     },

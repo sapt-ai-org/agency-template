@@ -4,6 +4,13 @@ const LINK_PREFIX = 'link:'
 const PROGRESS_PREFIX = 'progress:'
 const LINK_INDEX_KEY = 'link-index'
 const SESSION_SECRET_KEY = 'session-secret'
+const OAUTH_CLIENT_KEY = 'oauth-client'
+
+export interface OAuthClientRecord {
+  clientId: string
+  projectId: string
+  redirectURLs: string[]
+}
 
 type KV = KVNamespace
 
@@ -37,6 +44,14 @@ export async function getProgress(kv: KV, linkId: string): Promise<ProgressRecor
 
 export async function putProgress(kv: KV, record: ProgressRecord): Promise<void> {
   await kv.put(PROGRESS_PREFIX + record.linkId, JSON.stringify(record))
+}
+
+export async function getOAuthClientRecord(kv: KV): Promise<OAuthClientRecord | null> {
+  return kv.get<OAuthClientRecord>(OAUTH_CLIENT_KEY, 'json')
+}
+
+export async function putOAuthClientRecord(kv: KV, record: OAuthClientRecord): Promise<void> {
+  await kv.put(OAUTH_CLIENT_KEY, JSON.stringify(record))
 }
 
 /**

@@ -2,6 +2,8 @@ import { Hono, type Context } from 'hono'
 import { saptFromEnv } from '../sapt'
 import { verifyIdToken } from '../jwt'
 import { clearSession, setSession } from '../session'
+import { getOrProvisionOAuthClient } from '../oauth-provisioning'
+import { SaptApiError } from '@/lib/sapt'
 import type { AppBindings, WorkerEnv } from '../env'
 
 const STATE_COOKIE = 'oauth_state'
@@ -11,6 +13,16 @@ const VERIFIER_KV_PREFIX = 'oauth-verifier:'
 export const authRoutes = new Hono<AppBindings>()
 
 authRoutes.get('/auth/start', async (c) => {
+  let oauthClient
+  try {
+    oauthClient = await getOrProvisionOAuthClient(c.env, c.req.url)
+  } catch (err) {
+    console.error('[auth/start] OAuth client provisioning failed:', err)
+    const detail =
+      err instanceof SaptApiError ? err.message : err instanceof Error ? err.message : String(err)
+    return renderError(c, `Could not set up the Sapt OAuth client for this deployment. ${detail}`, 502)
+  }
+
   const state = randomToken()
   const verifier = randomVerifier()
   const challenge = await sha256base64url(verifier)
@@ -29,7 +41,7 @@ authRoutes.get('/auth/start', async (c) => {
 
   const url = new URL(`${c.env.SAPT_ENDPOINT}/api/auth/oauth2/authorize`)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('client_id', c.env.SAPT_OAUTH_CLIENT_ID)
+  url.searchParams.set('client_id', oauthClient.clientId)
   url.searchParams.set('redirect_uri', new URL('/auth/callback', c.req.url).toString())
   url.searchParams.set('state', state)
   url.searchParams.set('scope', 'openid profile email')
@@ -55,6 +67,14 @@ authRoutes.get('/auth/callback', async (c) => {
     return renderError(c, 'Sign-in attempt expired or was reused. Please try again.', 400)
   }
 
+  let oauthClient
+  try {
+    oauthClient = await getOrProvisionOAuthClient(c.env, c.req.url)
+  } catch (err) {
+    console.error('[auth/callback] OAuth client lookup failed:', err)
+    return renderError(c, 'Could not resolve the Sapt OAuth client for this deployment.', 502)
+  }
+
   const tokenRes = await fetch(`${c.env.SAPT_ENDPOINT}/api/auth/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -62,7 +82,7 @@ authRoutes.get('/auth/callback', async (c) => {
       grant_type: 'authorization_code',
       code,
       redirect_uri: new URL('/auth/callback', c.req.url).toString(),
-      client_id: c.env.SAPT_OAUTH_CLIENT_ID,
+      client_id: oauthClient.clientId,
       code_verifier: verifier,
     }),
   })
@@ -78,7 +98,7 @@ authRoutes.get('/auth/callback', async (c) => {
   const payload = await verifyIdToken(tokenBody.id_token, {
     jwksUrl: `${c.env.SAPT_ENDPOINT}/api/auth/jwks`,
     expectedIssuer: c.env.SAPT_ENDPOINT,
-    expectedAudience: c.env.SAPT_OAUTH_CLIENT_ID,
+    expectedAudience: oauthClient.clientId,
   })
   if (!payload) return renderError(c, 'The id_token from Sapt failed verification.', 502)
 
