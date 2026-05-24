@@ -6,12 +6,13 @@ import type { StepProps } from '../types'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export function InviteStep({ submitting, error, onSubmit, onBack }: StepProps) {
+export function InviteStep({ config, submitting, error, onSubmit, onBack }: StepProps) {
   const [email, setEmail] = useState('')
   const valid = EMAIL_RE.test(email.trim())
 
   return (
     <StepShell
+      theme={config.theme}
       title="Where should we send the invite?"
       description="We'll send you a link to accept your project in Sapt. You'll sign in with this email."
       error={error}

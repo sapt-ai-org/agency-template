@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import type { AgencyConfig } from '@/lib/config'
+import { DEFAULT_AGENCY_CONFIG } from '@/lib/config'
 import type { LinkRecord, ProgressRecord, Step } from '@/lib/types'
-import { STEPS } from '@/questionnaire/steps'
-import { theme } from '@/theme'
+import { buildSteps } from '@/questionnaire/steps'
 
 export const Route = createFileRoute('/start/$linkId')({
   component: QuestionnairePage,
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/start/$linkId')({
 interface FetchState {
   link: LinkRecord
   progress: ProgressRecord
+  config: AgencyConfig
 }
 
 function QuestionnairePage() {
@@ -51,12 +53,14 @@ function QuestionnairePage() {
     }
   }, [linkId])
 
+  const steps = useMemo(() => buildSteps(state?.config ?? DEFAULT_AGENCY_CONFIG), [state?.config])
+
   const handleSubmit = useCallback(
     async (stepName: Step, body: Record<string, unknown>) => {
       setSubmitting(true)
       setSubmitError(null)
       try {
-        const res = await fetch(`/api/steps/${linkId}/${stepName}`, {
+        const res = await fetch(`/api/steps/${linkId}/${encodeURIComponent(stepName)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -75,7 +79,11 @@ function QuestionnairePage() {
           setState(refreshed)
           setDone(true)
         } else {
-          setState({ link: refreshed.link, progress: data.progress })
+          setState({
+            link: refreshed.link,
+            progress: data.progress,
+            config: refreshed.config,
+          })
         }
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : 'Network error')
@@ -88,18 +96,18 @@ function QuestionnairePage() {
 
   const handleBack = useCallback(() => {
     if (!state) return
-    const idx = STEPS.findIndex((s) => s.step === state.progress.currentStep)
+    const idx = steps.findIndex((s) => s.step === state.progress.currentStep)
     if (idx <= 0) return
-    const prev = STEPS[idx - 1]
+    const prev = steps[idx - 1]
     if (!prev) return
     setState({ ...state, progress: { ...state.progress, currentStep: prev.step } })
     setSubmitError(null)
-  }, [state])
+  }, [state, steps])
 
   const currentDef = useMemo(() => {
     if (!state) return null
-    return STEPS.find((s) => s.step === state.progress.currentStep)
-  }, [state])
+    return steps.find((s) => s.step === state.progress.currentStep)
+  }, [state, steps])
 
   if (loadError) {
     return (
@@ -109,12 +117,14 @@ function QuestionnairePage() {
     )
   }
 
-  if (done) {
+  if (done && state) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-12 text-center">
-        <img src={theme.agencyLogoUrl} alt={theme.agencyName} className="size-12" />
+        <img src={state.config.theme.agencyLogoUrl} alt={state.config.theme.agencyName} className="size-12" />
         <h1 className="mt-6 text-2xl font-semibold tracking-tight">You&apos;re all set</h1>
-        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">{theme.completionCopy}</p>
+        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+          {state.config.theme.completionCopy}
+        </p>
         <Button className="mt-8" onClick={() => (window.location.href = 'https://app.sapt.ai')}>
           Continue in Sapt
         </Button>
@@ -134,6 +144,7 @@ function QuestionnairePage() {
   return (
     <StepComponent
       progress={state.progress}
+      config={state.config}
       submitting={submitting}
       error={submitError}
       onSubmit={(body) => handleSubmit(state.progress.currentStep, body)}

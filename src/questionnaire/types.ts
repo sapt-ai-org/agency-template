@@ -1,7 +1,9 @@
+import type { AgencyConfig } from '@/lib/config'
 import type { ProgressRecord, Step } from '@/lib/types'
 
 export interface StepProps {
   progress: ProgressRecord
+  config: AgencyConfig
   submitting: boolean
   error: string | null
   onSubmit: (body: Record<string, unknown>) => Promise<void>

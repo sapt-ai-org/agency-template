@@ -1,10 +1,11 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import type { AgencyConfig } from '@/lib/config'
+import { DEFAULT_AGENCY_CONFIG } from '@/lib/config'
 import type { AdminLinkView } from '@/lib/types'
 import type { SaptProject } from '@/lib/sapt'
-import { theme } from '@/theme'
 
 export const Route = createFileRoute('/admin')({
   component: AdminPage,
@@ -14,6 +15,7 @@ function AdminPage() {
   const navigate = useNavigate()
   const [links, setLinks] = useState<AdminLinkView[] | null>(null)
   const [projects, setProjects] = useState<SaptProject[] | null>(null)
+  const [config, setConfig] = useState<AgencyConfig>(DEFAULT_AGENCY_CONFIG)
   const [showMint, setShowMint] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,20 +24,23 @@ function AdminPage() {
     Promise.all([
       fetch('/api/admin/links'),
       fetch('/api/admin/projects'),
+      fetch('/api/admin/config'),
     ])
-      .then(async ([linksRes, projectsRes]) => {
-        if (linksRes.status === 401 || projectsRes.status === 401) {
+      .then(async ([linksRes, projectsRes, configRes]) => {
+        if (linksRes.status === 401 || projectsRes.status === 401 || configRes.status === 401) {
           navigate({ to: '/' })
           return
         }
-        if (!linksRes.ok || !projectsRes.ok) {
+        if (!linksRes.ok || !projectsRes.ok || !configRes.ok) {
           throw new Error('Failed to load admin data')
         }
         const linksBody = (await linksRes.json()) as { links: AdminLinkView[] }
         const projectsBody = (await projectsRes.json()) as { projects: SaptProject[] }
+        const configBody = (await configRes.json()) as { config: AgencyConfig }
         if (cancelled) return
         setLinks(linksBody.links)
         setProjects(projectsBody.projects)
+        setConfig(configBody.config)
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
@@ -68,14 +73,21 @@ function AdminPage() {
     <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-8">
       <header className="mb-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={theme.agencyLogoUrl} alt={theme.agencyName} className="size-8" />
-          <span className="text-sm font-medium">{theme.agencyName}</span>
+          <img src={config.theme.agencyLogoUrl} alt={config.theme.agencyName} className="size-8" />
+          <span className="text-sm font-medium">{config.theme.agencyName}</span>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); void handleLogout() }}>
-          <Button type="submit" variant="ghost" size="sm">
-            Log out
-          </Button>
-        </form>
+        <div className="flex items-center gap-1">
+          <Link to="/admin/config">
+            <Button variant="ghost" size="sm">
+              Configure
+            </Button>
+          </Link>
+          <form onSubmit={(e) => { e.preventDefault(); void handleLogout() }}>
+            <Button type="submit" variant="ghost" size="sm">
+              Log out
+            </Button>
+          </form>
+        </div>
       </header>
 
       <div className="mb-8 flex items-center justify-between">

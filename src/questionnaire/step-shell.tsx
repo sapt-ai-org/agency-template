@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
-import { theme } from '@/theme'
+import type { AgencyTheme } from '@/lib/config'
 
 interface StepShellProps {
+  theme: AgencyTheme
   title: string
   description?: string
   children: ReactNode
@@ -13,6 +14,7 @@ interface StepShellProps {
 }
 
 export function StepShell({
+  theme,
   title,
   description,
   children,

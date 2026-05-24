@@ -1,3 +1,5 @@
+import type { AgencyConfig } from './config'
+import { DEFAULT_AGENCY_CONFIG } from './config'
 import type { LinkRecord, ProgressRecord } from './types'
 
 const LINK_PREFIX = 'link:'
@@ -5,6 +7,7 @@ const PROGRESS_PREFIX = 'progress:'
 const LINK_INDEX_KEY = 'link-index'
 const SESSION_SECRET_KEY = 'session-secret'
 const OAUTH_CLIENT_KEY = 'oauth-client'
+const AGENCY_CONFIG_KEY = 'agency-config'
 
 export interface OAuthClientRecord {
   clientId: string
@@ -52,6 +55,19 @@ export async function getOAuthClientRecord(kv: KV): Promise<OAuthClientRecord | 
 
 export async function putOAuthClientRecord(kv: KV, record: OAuthClientRecord): Promise<void> {
   await kv.put(OAUTH_CLIENT_KEY, JSON.stringify(record))
+}
+
+export async function getAgencyConfig(kv: KV): Promise<AgencyConfig> {
+  const stored = await kv.get<AgencyConfig>(AGENCY_CONFIG_KEY, 'json')
+  return stored ?? DEFAULT_AGENCY_CONFIG
+}
+
+export async function putAgencyConfig(kv: KV, config: AgencyConfig): Promise<void> {
+  await kv.put(AGENCY_CONFIG_KEY, JSON.stringify(config))
+}
+
+export async function deleteAgencyConfig(kv: KV): Promise<void> {
+  await kv.delete(AGENCY_CONFIG_KEY)
 }
 
 /**

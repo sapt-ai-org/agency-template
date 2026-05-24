@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StartLinkIdRouteImport } from './routes/start.$linkId'
+import { Route as AdminConfigRouteImport } from './routes/admin.config'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -28,34 +29,42 @@ const StartLinkIdRoute = StartLinkIdRouteImport.update({
   path: '/start/$linkId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminConfigRoute = AdminConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/config': typeof AdminConfigRoute
   '/start/$linkId': typeof StartLinkIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/config': typeof AdminConfigRoute
   '/start/$linkId': typeof StartLinkIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/config': typeof AdminConfigRoute
   '/start/$linkId': typeof StartLinkIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/start/$linkId'
+  fullPaths: '/' | '/admin' | '/admin/config' | '/start/$linkId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/start/$linkId'
-  id: '__root__' | '/' | '/admin' | '/start/$linkId'
+  to: '/' | '/admin' | '/admin/config' | '/start/$linkId'
+  id: '__root__' | '/' | '/admin' | '/admin/config' | '/start/$linkId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   StartLinkIdRoute: typeof StartLinkIdRoute
 }
 
@@ -82,12 +91,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StartLinkIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/config': {
+      id: '/admin/config'
+      path: '/config'
+      fullPath: '/admin/config'
+      preLoaderRoute: typeof AdminConfigRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminConfigRoute: typeof AdminConfigRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminConfigRoute: AdminConfigRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   StartLinkIdRoute: StartLinkIdRoute,
 }
 export const routeTree = rootRouteImport

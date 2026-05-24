@@ -36,29 +36,27 @@ When it's done, visit your worker URL and click **Sign in with Sapt**. On the fi
 
 The template is designed to be edited — by you or by an AI coding agent.
 
-### Branding
+### Branding & questions (no code edit needed)
 
-Edit `src/theme.ts`:
+Sign in to the admin view and open **Configure** in the top-right. The page is a JSON editor for everything the questionnaire renders:
 
-```ts
-export const theme = {
-  agencyName: 'Acme Co',
-  agencyLogoUrl: 'https://your-cdn.com/logo.svg',
-  primaryColor: '220 90% 50%', // HSL triplet without parentheses
-  accentColor: '220 30% 90%',
-  welcomeCopy: 'We help DTC brands grow…',
-  completionCopy: "We'll be in touch within 24 hours.",
-}
-```
+- `theme.*` — agency name, logo, colors, welcome and completion copy.
+- `questionnaire.questions[]` — ordered list of onboarding questions, each one a `text` or `multiselect`. Order in the array is the order clients see them.
+- `memory.{slug,title,description}` — controls the single Sapt memory entry written at the end of every completed questionnaire.
 
-### Add or remove questionnaire steps
+Saves apply immediately. The Meta-connect and email-invite steps are always the last two — they aren't editable through this surface because they call bespoke Sapt endpoints.
 
-Each step is one file in `src/questionnaire/steps/`. Adding a new step:
+`src/theme.ts` and the default question list in `src/lib/config.ts` are the *defaults* — used on a fresh deployment until you save something in the admin UI. The **Reset to defaults** button on the configure page restores them.
 
-1. Create `src/questionnaire/steps/my-step.tsx` exporting a React component.
-2. Add the step name to the `Step` union in `src/lib/types.ts`.
-3. Append it to the `STEPS` array in `src/questionnaire/steps.ts`.
-4. Add a `case 'my-step':` handler in `src/worker/routes/steps.ts` that performs whatever Sapt API call the step needs.
+### Add a new question type
+
+If `text` and `multiselect` aren't enough, you can extend the schema:
+
+1. Add a new variant to the `Question` union in `src/lib/config.ts`.
+2. Write a React component in `src/questionnaire/steps/` that takes a `StepProps` and renders the question.
+3. Wire it into `buildSteps` in `src/questionnaire/steps.ts`.
+4. Extend `extractAnswer` in `src/worker/routes/steps.ts` to parse and validate the new shape from the request body.
+5. Extend `buildMemoryContent` in `src/lib/memory-content.ts` to render the new answer type into markdown.
 
 ### Calling new Sapt endpoints
 
@@ -90,22 +88,30 @@ Useful commands:
 
 ```
 src/
-├── theme.ts                  # Branding values — edit this
+├── theme.ts                  # Default branding values (seed for the first deploy)
 ├── lib/
-│   ├── sapt.ts               # Sapt REST API client (~200 LOC)
+│   ├── sapt.ts               # Sapt REST API client (~250 LOC)
+│   ├── config.ts             # AgencyConfig type + DEFAULT_AGENCY_CONFIG
+│   ├── memory-content.ts     # Markdown builder for the final memory entry
 │   ├── kv.ts                 # Cloudflare KV helpers
 │   ├── types.ts              # LinkRecord, ProgressRecord, Step
 │   └── utils.ts              # cn() Tailwind class merge
 ├── components/ui/            # Hand-written shadcn-style primitives
 ├── questionnaire/
-│   ├── steps.ts              # STEPS array (single source of truth)
+│   ├── steps.ts              # buildSteps(config) — derives the flow from KV
 │   ├── step-shell.tsx        # Shared layout for each step
 │   ├── types.ts              # StepProps, StepDefinition
-│   └── steps/                # One file per step
+│   └── steps/
+│       ├── welcome.tsx
+│       ├── text-question.tsx       # Generic text question component
+│       ├── multiselect-question.tsx# Generic multiselect component
+│       ├── connect-meta.tsx
+│       └── invite.tsx              # Writes the memory entry + sends invite
 ├── routes/                   # Tanstack Router file-based routes
 │   ├── __root.tsx
-│   ├── index.tsx             # Landing page
+│   ├── index.tsx             # Landing page (reads theme from /api/public/theme)
 │   ├── admin.tsx             # Admin view
+│   ├── admin.config.tsx      # Configure page (JSON editor for AgencyConfig)
 │   └── start.$linkId.tsx     # Client questionnaire
 ├── worker/
 │   ├── index.ts              # Hono app entry
@@ -117,7 +123,7 @@ src/
 │   └── routes/
 │       ├── auth.ts           # OAuth start + callback + logout
 │       ├── admin.ts          # /api/admin/* (gated by session)
-│       └── steps.ts          # /api/steps/:linkId/:stepName
+│       └── steps.ts          # /api/steps/:linkId + /api/public/theme
 ├── styles.css                # Tailwind + CSS variables
 └── main.tsx                  # SPA entry
 ```

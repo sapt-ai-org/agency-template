@@ -9,7 +9,7 @@ interface ConnectPayload {
   status?: 'pending' | 'completed' | 'failed' | 'expired'
 }
 
-export function ConnectMetaStep({ progress, submitting, error, onSubmit, onBack }: StepProps) {
+export function ConnectMetaStep({ config, progress, submitting, error, onSubmit, onBack }: StepProps) {
   const [phase, setPhase] = useState<'idle' | 'waiting' | 'done'>(
     progress.connectSessionToken ? 'waiting' : 'idle'
   )
@@ -97,6 +97,7 @@ export function ConnectMetaStep({ progress, submitting, error, onSubmit, onBack 
 
   return (
     <StepShell
+      theme={config.theme}
       title="Connect your Meta account"
       description="We'll open a Meta authorization window in a new tab. Once you're done, we'll pick it up automatically."
       error={pollError ?? error}
@@ -112,9 +113,7 @@ export function ConnectMetaStep({ progress, submitting, error, onSubmit, onBack 
               Connect Meta
             </Button>
           )}
-          {phase === 'waiting' && (
-            <Button disabled>Waiting for Meta…</Button>
-          )}
+          {phase === 'waiting' && <Button disabled>Waiting for Meta…</Button>}
         </div>
       }
     >
