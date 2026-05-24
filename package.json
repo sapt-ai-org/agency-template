@@ -1,0 +1,77 @@
+{
+  "name": "agency-onboarding-template",
+  "version": "0.1.0",
+  "description": "Self-hostable agency onboarding template for Sapt. Fork, brand, deploy.",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sapt-ai-org/agency-template.git"
+  },
+  "homepage": "https://github.com/sapt-ai-org/agency-template#readme",
+  "bugs": {
+    "url": "https://github.com/sapt-ai-org/agency-template/issues"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:vite": "vite",
+    "build": "vite build",
+    "deploy": "vite build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run"
+  },
+  "cloudflare": {
+    "bindings": {
+      "SAPT_API_KEY": {
+        "description": "Your Sapt API key with reflecting scope. Generate at app.sapt.ai → Account Settings → API Keys."
+      },
+      "SAPT_OAUTH_CLIENT_ID": {
+        "description": "OAuth client ID. Create at app.sapt.ai → any project → Project Settings → OAuth Clients. Use https://<your-worker>.workers.dev/auth/callback as the redirect URL."
+      },
+      "SAPT_OAUTH_CLIENT_SECRET": {
+        "description": "OAuth client secret returned when you created the OAuth client above."
+      }
+    }
+  },
+  "dependencies": {
+    "hono": "^4.6.14",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@tanstack/react-router": "^1.95.0",
+    "lucide-react": "^0.469.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@eslint/js": "^9.18.0",
+    "@tanstack/router-plugin": "^1.95.0",
+    "@types/react": "^19.0.6",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "postcss": "^8.5.1",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.0.0",
+    "@types/node": "^22.10.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
