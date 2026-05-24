@@ -112,6 +112,8 @@ export interface CreateMemoryEntryInput {
   content: string
 }
 
+const TEMPLATE_VERSION = '0.1.0'
+
 export function createSaptClient(opts: SaptClientOptions): SaptClient {
   const endpoint = (opts.endpoint ?? 'https://api.sapt.ai').replace(/\/$/, '')
   const fetchImpl = opts.fetchImpl ?? fetch
@@ -124,6 +126,9 @@ export function createSaptClient(opts: SaptClientOptions): SaptClient {
         // Sapt's API key middleware reads the `ApiKey` scheme. `Bearer` is
         // reserved for session and OAuth tokens.
         Authorization: `ApiKey ${opts.apiKey}`,
+        // Identifies this client in Sapt's request logs. Lets us filter Axiom
+        // by `reqUserAgent startswith "agency-onboarding-template"`.
+        'User-Agent': `agency-onboarding-template/${TEMPLATE_VERSION}`,
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
