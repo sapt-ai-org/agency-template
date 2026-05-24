@@ -77,10 +77,11 @@ function AdminPage() {
           <span className="text-sm font-medium">{config.theme.agencyName}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Link to="/admin/config">
-            <Button variant="ghost" size="sm">
-              Configure
-            </Button>
+          <Link
+            to="/admin/config"
+            className="inline-flex h-9 items-center rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            Configure
           </Link>
           <form onSubmit={(e) => { e.preventDefault(); void handleLogout() }}>
             <Button type="submit" variant="ghost" size="sm">
